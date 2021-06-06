@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top" />
+    <link
+      href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdn.jsdelivr.net/npm/@mdi/font@4.x/css/materialdesignicons.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css"
+      rel="stylesheet"
+    />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui"
+    />
+  </head>
+  <body>
+    <div id="app">
+      <v-app>
+        <v-app-bar dark fixed app>
+          <span class="headline">My Task Board</span>
+          <v-spacer></v-spacer>
+          <!-- 処理中表示 -->
+          <p v-if="isProcessing" class="caption mb-0 pr-1">Processing...</p>
+          <v-progress-circular
+            v-if="isProcessing"
+            indeterminate
+            color="white"
+            size="20"
+          ></v-progress-circular>
+          <!-- 処理中表示END -->
+          <v-btn icon @click="showNewDialog"><v-icon>mdi-plus</v-icon></v-btn>
+        </v-app-bar>
+        <v-main>
+          <v-container>
+            <v-row>
+              <v-col>
+                <v-card color="lime lighten-5" min-height="500">
+                  <v-card-title>
+                    <v-row>
+                      <v-col>Todo</v-col>
+                      <v-col
+                        cols="auto"
+                        class="grey--text body-1"
+                        align-self="end"
+                        >{{todoTasks().length}}</v-col
+                      >
+                    </v-row>
+                  </v-card-title>
+                  <v-card-text>
+                    <task-cards
+                      :tasks="todoTasks()"
+                      groupname="myGroup"
+                      draggableid="todoTasks"
+                      @on-end="onEnd"
+                      @show-detail-dialog="showDetailDialog"
+                      @switch-is-processing="switchIsProcessing"
+                    ></task-cards>
+                  </v-card-text>
+                </v-card>
+              </v-col>
+              <v-col>
+                <v-card color="green lighten-5" min-height="500">
+                  <v-card-title>
+                    <v-row>
+                      <v-col>This week</v-col>
+                      <v-col
+                        cols="auto"
+                        class="grey--text body-1"
+                        align-self="end"
+                        >{{thisWeekTasks().length}}</v-col
+                      >
+                    </v-row>
+                  </v-card-title>
+                  <v-card-text>
+                    <task-cards
+                      :tasks="thisWeekTasks()"
+                      groupname="myGroup"
+                      draggableid="thisWeekTasks"
+                      @on-end="onEnd"
+                      @show-detail-dialog="showDetailDialog"
+                      @switch-is-processing="switchIsProcessing"
+                    ></task-cards>
+                  </v-card-text>
+                </v-card>
+              </v-col>
+              <v-col>
+                <v-card color="cyan lighten-5" min-height="500">
+                  <v-card-title>
+                    <v-row>
+                      <v-col>Today</v-col>
+                      <v-col
+                        cols="auto"
+                        class="grey--text body-1"
+                        align-self="end"
+                        >{{todayTasks().length}}</v-col
+                      >
+                    </v-row>
+                  </v-card-title>
+                  <v-card-text>
+                    <task-cards
+                      :tasks="todayTasks()"
+                      groupname="myGroup"
+                      draggableid="todayTasks"
+                      @on-end="onEnd"
+                      @show-detail-dialog="showDetailDialog"
+                      @switch-is-processing="switchIsProcessing"
+                    ></task-cards>
+                  </v-card-text>
+                </v-card>
+              </v-col>
+              <v-col>
+                <v-card color="blue lighten-5" min-height="500">
+                  <v-card-title>
+                    <v-row>
+                      <v-col>In progress</v-col>
+                      <v-col
+                        cols="auto"
+                        class="grey--text body-1"
+                        align-self="end"
+                        >{{inProgressTasks().length}}</v-col
+                      >
+                    </v-row>
+                  </v-card-title>
+                  <v-card-text>
+                    <task-cards
+                      :tasks="inProgressTasks()"
+                      groupname="myGroup"
+                      draggableid="inProgressTasks"
+                      @on-end="onEnd"
+                      @show-detail-dialog="showDetailDialog"
+                      @switch-is-processing="switchIsProcessing"
+                    ></task-cards>
+                  </v-card-text>
+                </v-card>
+              </v-col>
+              <v-col>
+                <v-card color="grey lighten-2" min-height="500">
+                  <v-card-title>
+                    <v-row>
+                      <v-col>Done</v-col>
+                      <v-col
+                        cols="auto"
+                        class="grey--text body-1"
+                        align-self="end"
+                        >{{doneTasks().length}}</v-col
+                      >
+                    </v-row>
+                  </v-card-title>
+                  <v-card-text>
+                    <task-cards
+                      :tasks="doneTasks()"
+                      groupname="myGroup"
+                      draggableid="doneTasks"
+                      @on-end="onEnd"
+                      @show-detail-dialog="showDetailDialog"
+                      @switch-is-processing="switchIsProcessing"
+                    ></task-cards>
+                  </v-card-text>
+                </v-card>
+              </v-col>
+            </v-row>
+            <!-- <v-row>
+              <v-col> {{todoTasks()}} </v-col>
+              <v-col> {{thisWeekTasks()}} </v-col>
+              <v-col> {{todayTasks()}} </v-col>
+              <v-col> {{inProgressTasks()}} </v-col>
+              <v-col> {{doneTasks()}} </v-col>
+            </v-row> -->
+          </v-container>
+          <!-- 編集ダイアログ -->
+          <v-dialog
+            v-model="dispDetailDialog"
+            max-width="800"
+            scrollable
+          >
+            <v-card>
+              <v-card-title class="headline">
+                <v-text-field
+                  v-model="detailShown.title"
+                  hide-details
+                  dense
+                  style="font-size: 20px"
+                ></v-text-field>
+              </v-card-title>
+              <v-card-text class="pt-1 pb-3" max-height="600">
+                <v-system-bar color="grey lighten-2">情報</v-system-bar>
+                <v-container>
+                  <v-row>
+                    <v-col cols="6">
+                      <v-select
+                        label="Status"
+                        v-model="detailShown.customStatus"
+                        :items="statuses"
+                        hide-details
+                        dense
+                      ></v-select>
+                    </v-col>
+                    <v-col cols="6">
+                      <v-select
+                        label="Classify"
+                        v-model="detailShown.tasklistId"
+                        :items="classifies"
+                        hide-details
+                        dense
+                      ></v-select>
+                    </v-col>
+                  </v-row>
+                  <v-row>
+                    <v-col cols="6">
+                      <v-menu
+                        v-model="dispPlannedDatePicker"
+                        :close-on-content-click="false"
+                        transition="scale-transition"
+                        offset-y
+                        min-width="auto"
+                      >
+                        <template v-slot:activator="{ on, attrs }">
+                          <v-text-field
+                            v-model="detailShown.plannedDate"
+                            label="Planned date"
+                            readonly
+                            v-bind="attrs"
+                            v-on="on"
+                            hide-details
+                            dense
+                          ></v-text-field>
+                        </template>
+                        <v-date-picker
+                          v-model="detailShown.plannedDate"
+                          @input="dispPlannedDatePicker = false"
+                        ></v-date-picker>
+                      </v-menu>
+                    </v-col>
+                    <v-col cols="6">
+                      <v-menu
+                        v-model="dispDeadlinePicker"
+                        :close-on-content-click="false"
+                        transition="scale-transition"
+                        offset-y
+                        min-width="auto"
+                      >
+                        <template v-slot:activator="{ on, attrs }">
+                          <v-text-field
+                            v-model="detailShown.deadline"
+                            label="Deadline"
+                            readonly
+                            v-bind="attrs"
+                            v-on="on"
+                            hide-details
+                            dense
+                          ></v-text-field>
+                        </template>
+                        <v-date-picker
+                          v-model="detailShown.deadline"
+                          @input="dispDeadlinePicker = false"
+                        ></v-date-picker>
+                      </v-menu>
+                    </v-col>
+                  </v-row>
+                </v-container>
+                <v-system-bar v-if="detailShown.id" color="grey lighten-2">Sub tasks</v-system-bar>
+                <v-container v-if="detailShown.id">
+                  <v-row v-for="subTask in getSubTasks(detailShown.id)" :key="subTask.id">
+                    <v-col cols="auto" class="py-0 pr-0">
+                      <v-checkbox
+                        @change="onChangeSubTaskCheck(subTask.id);"
+                        label=""
+                        :input-value="subTask.status === 'completed'"
+                        true-value="completed"
+                        class="mt-0"
+                        dense
+                        hide-details
+                      ></v-checkbox>
+                    </v-col>
+                    <v-col class="py-0 pl-2">
+                      <v-text-field
+                        v-model="subTask.title"
+                        placeholder="Sub task name"
+                        :disabled="subTask.status === 'completed'"
+                        hide-details
+                        dense
+                      ></v-text-field>
+                    </v-col>
+                  </v-row>
+                  <v-row>
+                    <v-col cols="auto" class="py-2">
+                      <v-btn text @click="createSubTask(detailShown.id)"><v-icon>mdi-plus</v-icon>Add sub task</v-btn>
+                    </v-col>
+                    <v-spacer></v-spacer>
+                  </v-row>
+                </v-container>
+                <v-system-bar color="grey lighten-2">メモ</v-system-bar>
+                <v-container>
+                  <v-row>
+                    <v-col cols="12">
+                      <v-textarea
+                        label=""
+                        v-model="detailShown.note"
+                        hide-details
+                        dense
+                        clearable
+                        auto-grow
+                        rows="1"
+                      ></v-textarea>
+                    </v-col>
+                  </v-row>
+                </v-container>
+              </v-card-text>
+            </v-card>
+          </v-dialog>
+          <!-- 編集ダイアログEND -->
+          <v-overlay :value="isLoading">
+            <v-progress-circular indeterminate size="64" color="white"></v-progress-circular>
+          </v-overlay>
+        </v-main>
+      </v-app>
+    </div>
+    <?!= include('js'); ?>
+  </body>
+</html>
