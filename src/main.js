@@ -1,13 +1,14 @@
 function test() {
-  let taskObj = {
-    title: 'にょん',
-    // ここは+09:00にすると何故か1日前になってしまう
-    due: '2021-06-30T00:00:00+00:00',
-    status: 'needsAction',
-    parent: 'VXZJamJjMWZ1QTRWY2pYWQ',
-    notes: 'にゃー',
-  };
-  Tasks.Tasks.insert(taskObj, 'MDA1NjM2MDMzNjkzMjA2MDEwNjc6MDow', {parent: 'VXZJamJjMWZ1QTRWY2pYWQ'});
+  // let taskObj = {
+  //   title: 'にょん',
+  //   // ここは+09:00にすると何故か1日前になってしまう
+  //   due: '2021-06-30T00:00:00+00:00',
+  //   status: 'needsAction',
+  //   parent: 'VXZJamJjMWZ1QTRWY2pYWQ',
+  //   notes: 'にゃー',
+  // };
+  // Tasks.Tasks.insert(taskObj, 'MDA1NjM2MDMzNjkzMjA2MDEwNjc6MDow', {parent: 'VXZJamJjMWZ1QTRWY2pYWQ'});
+  console.log(getAllTaskInfoList());
 }
 
 function doGet(e) {
@@ -169,8 +170,8 @@ function upsertTask(taskInfoObjs) {
       };
       const tasklistObj = getTasklistObj();
         let upsertedTask = {};
-        Tasks.Tasks.move(taskInfoObj.tasklistId, taskInfoObj.id);
         if(taskInfoObj.id) {
+          Tasks.Tasks.move(taskInfoObj.tasklistId, taskInfoObj.id);
           taskObj.id = taskInfoObj.id;
           upsertedTask = Tasks.Tasks.update(taskObj, taskInfoObj.tasklistId, taskInfoObj.id);
         } else {
