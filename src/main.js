@@ -8,7 +8,8 @@ function test() {
   //   notes: 'にゃー',
   // };
   // Tasks.Tasks.insert(taskObj, 'MDA1NjM2MDMzNjkzMjA2MDEwNjc6MDow', {parent: 'VXZJamJjMWZ1QTRWY2pYWQ'});
-  console.log(getAllTaskInfoList());
+  // console.log(getAllTaskInfoList());
+  Tasks.Tasks.move('MmJ0ZGxWUXZVaS1lWGE0WQ', 'TUhMQ1Q0STM0cm9uMG9scQ');
 }
 
 function doGet(e) {
@@ -153,35 +154,91 @@ function prepareInitialSettingToTasks() {
 }
 
 function upsertTask(taskInfoObjs) {
-  try {
-    return JSON.stringify(taskInfoObjs.reduce((previous, taskInfoObj) => {
-      const notesJsonObj = {
-        customStatus: taskInfoObj.customStatus,
-        waiting: taskInfoObj.waiting,
-        plannedDate: taskInfoObj.plannedDate,
-        note: taskInfoObj.note,
-      };
-      let taskObj = {
-        title: taskInfoObj.title,
-        // ここは+09:00にすると何故か1日前になってしまう
-        due: taskInfoObj.deadline ? taskInfoObj.deadline + 'T00:00:00+00:00' : '',
-        status: taskInfoObj.customStatus === 'done' ? 'completed' : taskInfoObj.status,
-        notes: JSON.stringify(notesJsonObj),
-      };
-      const tasklistObj = getTasklistObj();
-        let upsertedTask = {};
-        if(taskInfoObj.id) {
-          Tasks.Tasks.move(taskInfoObj.tasklistId, taskInfoObj.id);
-          taskObj.id = taskInfoObj.id;
-          upsertedTask = Tasks.Tasks.update(taskObj, taskInfoObj.tasklistId, taskInfoObj.id);
-        } else {
-          Logger.log(taskObj);
-          upsertedTask = Tasks.Tasks.insert(taskObj, taskInfoObj.tasklistId, {parent: taskInfoObj.parent});
+  let upsertedTask = {};
+  let errors = [];
+  let beforeId = '';
+  const resTaskInfos = taskInfoObjs.reduce((previous, taskInfoObj) => {
+    const notesJsonObj = {
+      customStatus: taskInfoObj.customStatus,
+      waiting: taskInfoObj.waiting,
+      plannedDate: taskInfoObj.plannedDate,
+      note: taskInfoObj.note,
+    };
+    let taskObj = {
+      title: taskInfoObj.title,
+      // ここは+09:00にすると何故か1日前になってしまう
+      due: taskInfoObj.deadline ? taskInfoObj.deadline + 'T00:00:00+00:00' : '',
+      status: taskInfoObj.customStatus === 'done' ? 'completed' : taskInfoObj.status,
+      notes: JSON.stringify(notesJsonObj),
+    };
+
+    // idの値がある場合、update
+    if(taskInfoObj.id) {
+      // taskInfoObjに入っているtasklistIdのリストに、現状あるタスクを取得
+      const existTasks = Tasks.Tasks.list(taskInfoObj.tasklistId).items;
+      // 該当タスクがリストに含まれるか
+      let isExist = false;
+      if(existTasks && existTasks.length > 0) {
+        isExist = existTasks.map((existTask) => {
+          return existTask.id;
+        }).some((existTaskId) => {
+          return existTaskId === taskInfoObj.id;
+        });
+      }
+      // 含まれなければ、リスト間移動(内部的には、同じ内容のタスクを作って元のを消して)をする
+      //   ※リスト間移動のAPIは提供されていないため
+      if(!isExist) {
+        try {
+          const newTask = Tasks.Tasks.insert(taskObj, taskInfoObj.tasklistId);
+          Tasks.Tasks.remove(taskInfoObj.tasklistId,taskInfoObj.id);
+          // 元々のIDをbeforeIdに退避させ、新しく作ったタスクのIDで、idの値を洗い替え
+          beforeId = taskInfoObj.id;
+          taskInfoObj.id = newTask.id;
+        } catch (error) {
+          const errorObj = {
+            error,
+            process: 'move_between_lists',
+            taskInfo: taskInfoObj,
+          };
+          errors.push(errorObj);
         }
-        previous.push(convTaskToTaskInfo(upsertedTask, taskInfoObj.tasklistId, tasklistObj));
-        return previous;
-    }, []));
-  } catch (error) {
-    return JSON.stringify(error);
+      }
+      taskObj.id = taskInfoObj.id;
+      try {
+        upsertedTask = Tasks.Tasks.update(taskObj, taskInfoObj.tasklistId, taskInfoObj.id);
+      } catch (error) {
+        const errorObj = {
+          error,
+          process: 'update_task',
+          taskInfo: taskInfoObj,
+        };
+        errors.push(errorObj);
+      }
+
+    // idの値がない場合、insert
+    } else {
+      try {
+        upsertedTask = Tasks.Tasks.insert(taskObj, taskInfoObj.tasklistId, {parent: taskInfoObj.parent});
+      } catch (error) {
+        const errorObj = {
+          error,
+          process: 'update_task',
+          taskInfo: taskInfoObj,
+        };
+        errors.push(errorObj);
+      }
+    }
+    const tasklistObj = getTasklistObj();
+    let upsertedTaskInfo = convTaskToTaskInfo(upsertedTask, taskInfoObj.tasklistId, tasklistObj);
+    if(beforeId) {
+      upsertedTaskInfo.beforeId = beforeId;
+    }
+    previous.push(upsertedTaskInfo);
+    return previous;
+  }, []);
+  if(errors.length > 0) {
+    return JSON.stringify({errors});
+  } else {
+    return JSON.stringify({taskInfos: resTaskInfos});
   }
 }

@@ -102,7 +102,7 @@
       },
       getRemainDayNum: function (tgtDate) {
         if (tgtDate) {
-          return Number(moment(tgtDate, 'YYYY-MM-DD').diff(moment(), 'd'));
+          return Number(moment(tgtDate, 'YYYY-MM-DD').diff(moment(moment().format('YYYY-MM-DD') + 'T00:00:00'), 'd'));
         } else {
           return null;
         }
@@ -111,11 +111,11 @@
         if (deadline || plannedDate) {
           if (deadline) {
             return Number(
-              moment(deadline, 'YYYY-MM-DD').diff(moment(), 'd')
+              moment(deadline, 'YYYY-MM-DD').diff(moment(moment().format('YYYY-MM-DD') + 'T00:00:00'), 'd')
             );
           } else {
             return Number(
-              moment(plannedDate, 'YYYY-MM-DD').diff(moment(), 'd')
+              moment(plannedDate, 'YYYY-MM-DD').diff(moment(moment().format('YYYY-MM-DD') + 'T00:00:00'), 'd')
             );
           }
         } else {
@@ -261,8 +261,8 @@
         const tgtIndex = this.taskInfos.findIndex((taskInfo) => {
           return taskInfo.id === taskId;
         });
-        console.log(this.taskInfos[tgtIndex].status);
-        console.log('↓');
+        // console.log(this.taskInfos[tgtIndex].status);
+        // console.log('↓');
         if(this.taskInfos[tgtIndex].status === 'completed') {
           this.taskInfos[tgtIndex].status = 'needsAction';
           this.taskInfos[tgtIndex].customStatus = 'todo';
@@ -270,14 +270,15 @@
           this.taskInfos[tgtIndex].status = 'completed';
           this.taskInfos[tgtIndex].customStatus = 'done';
         }
-        console.log(this.taskInfos[tgtIndex].status);
+        // console.log(this.taskInfos[tgtIndex].status);
       },
       switchIsProcessing: function(value) {
         this.isProcessing = value;
       },
       updateTaskById: function(task) {
+        const tgtId = task.beforeId ? task.beforeId : task.id;
         const tgtIndex = this.taskInfos.findIndex((taskInfo) => {
-          return taskInfo.id === task.id;
+          return taskInfo.id === tgtId;
         });
         if(tgtIndex === -1) {
           this.taskInfos.push(task);
@@ -309,7 +310,7 @@
           this.isProcessing = true;
           let tgtTasks = this.getSubTasks(this.detailShown.id);
           tgtTasks.push(this.detailShown);
-          console.log(tgtTasks);
+          // console.log(tgtTasks);
           google.script.run
             .withSuccessHandler((res) => {
               execAfterUpsertProcess(res);
@@ -322,13 +323,17 @@
   });
   function execAfterUpsertProcess(res) {
     const tmpRes = JSON.parse(res);
-    if(tmpRes.details) {
-      console.error(tmpRes.details.code, tmpRes.details.message);
-      console.table(tmpRes.taskInfos);
+    console.log(tmpRes);
+    if(tmpRes.errors) {
+      tmpRes.errors.forEach((error) => {
+        console.log(error.process);
+        console.table(error.error);
+        console.table(error.taskInfo);
+      });
     } else {
-      Object.keys(tmpRes).forEach((id) => {
-        console.table(tmpRes[id]);
-        vm.updateTaskById(tmpRes[id]);
+      tmpRes.taskInfos.forEach((taskInfo) => {
+        console.table(taskInfo);
+        vm.updateTaskById(taskInfo);
       });
     }
   }
