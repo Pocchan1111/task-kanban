@@ -194,7 +194,9 @@
         const taskIdSpan = event.item.innerHTML.match(/<span id=\"taskId\">[a-zA-Z0-9!-~]*<\/span>/g)[0];
         const taskId = taskIdSpan.replace(/<span id=\"taskId\">/g, '').replace(/<\/span>/g, '');
         const oldListName = event.from.id;
+        const oldIndex = event.oldIndex;
         const newListName = event.to.id;
+        const newIndex = event.newIndex;
         if(oldListName !== newListName) {
           const tgtIndex = this.taskInfos.findIndex((taskInfo) => {
             return taskInfo.id === taskId;
@@ -288,7 +290,7 @@
         } else {
           this.taskInfos[tgtIndex] = task;
         }
-      }
+      },
     },
     mounted: function(){
       this.isLoading = true;
