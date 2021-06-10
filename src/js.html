@@ -144,6 +144,7 @@
         waiting: '',
         note: '',
       },
+      shownTasklistId: '',
       dispDetailDialog: false,
       dispDeadlinePicker: false,
       dispPlannedDatePicker: false,
@@ -209,6 +210,8 @@
       },
       filterTasks: function (customStatusStr) {
         let tmpTasks = this.taskInfos.filter((task) => {
+          return !this.shownTasklistId || task.tasklistId === this.shownTasklistId;
+        }).filter((task) => {
           return !task.parent && task.customStatus === customStatusStr;
         });
         return tmpTasks && tmpTasks.length > 0 ? tmpTasks.sort(compareWithDate) : tmpTasks;

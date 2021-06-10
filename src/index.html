@@ -39,6 +39,19 @@
         <v-main>
           <v-container>
             <v-row>
+              <v-col cols="12" sm="6" md="4" lg="3" xl="2">
+                <v-select
+                  label="Classify"
+                  v-model="shownTasklistId"
+                  :items="classifies"
+                  hide-details
+                  dense
+                  clearable
+                ></v-select>
+              </v-col>
+              <v-spacer></v-spacer>
+            </v-row>
+            <v-row>
               <v-col>
                 <v-card color="lime lighten-5" min-height="500">
                   <v-card-title>
