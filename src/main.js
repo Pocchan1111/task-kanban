@@ -243,13 +243,28 @@ function upsertTask(taskInfoObjs) {
         } catch (error) {
           const errorObj = {
             error,
-            process: 'move_between_lists',
+            process: 'move_task_between_lists',
             taskInfo: taskInfoObj,
           };
           errors.push(errorObj);
         }
       }
       taskObj.id = taskInfoObj.id;
+      // previousが格納されている場合、moveする
+      if ('previous' in taskInfoObj) {
+        try {
+          Tasks.Tasks.move(taskInfoObj.tasklistId, taskInfoObj.id, {
+            previous: taskInfoObj.previous,
+          });
+        } catch (error) {
+          const errorObj = {
+            error,
+            process: 'move_task_in_list',
+            taskInfo: taskInfoObj,
+          };
+          errors.push(errorObj);
+        }
+      }
       try {
         upsertedTask = Tasks.Tasks.update(
           taskObj,

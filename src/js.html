@@ -213,22 +213,23 @@
         return this.filterTasks('done');
       },
       onEnd: function (event) {
-        const targetElement = this.$refs[event.to.id];
-        this.isProcessing = true;
-        const taskIdSpan = event.item.innerHTML.match(
-          /<span id=\"taskId\">[a-zA-Z0-9!-~]*<\/span>/g
-        )[0];
-        const taskId = taskIdSpan
-          .replace(/<span id=\"taskId\">/g, '')
-          .replace(/<\/span>/g, '');
         const oldListName = event.from.id;
         const oldIndex = event.oldIndex;
         const newListName = event.to.id;
         const newIndex = event.newIndex;
         if (
           oldListName !== newListName ||
-          (oldIndex !== newIndex && this.selectedOrderBy === 'Custom')
+          (oldIndex !== newIndex &&
+            this.shownTasklistId &&
+            this.selectedOrderBy === 'Custom')
         ) {
+          this.isProcessing = true;
+          const taskIdSpan = event.item.innerHTML.match(
+            /<span id=\"taskId\">[a-zA-Z0-9!-~]*<\/span>/g
+          )[0];
+          const taskId = taskIdSpan
+            .replace(/<span id=\"taskId\">/g, '')
+            .replace(/<\/span>/g, '');
           const tgtIndex = this.taskInfos.findIndex((taskInfo) => {
             return taskInfo.id === taskId;
           });
@@ -237,7 +238,22 @@
             'Tasks',
             ''
           );
-          if (this.selectedOrderBy === 'Custom') {
+          if (this.shownTasklistId && this.selectedOrderBy === 'Custom') {
+            if (newIndex === 0) {
+              // 一番前に持ってくるため
+              this.taskInfos[tgtIndex].previous = '';
+            } else {
+              const previousTaskIdSpan =
+                event.to.parentNode.children[0].children[
+                  newIndex - 1
+                ].innerHTML.match(
+                  /<span id=\"taskId\">[a-zA-Z0-9!-~]*<\/span>/g
+                )[0];
+              const previousTaskId = previousTaskIdSpan
+                .replace(/<span id=\"taskId\">/g, '')
+                .replace(/<\/span>/g, '');
+              this.taskInfos[tgtIndex].previous = previousTaskId;
+            }
             // TODO 自分の後ろに並んでいるタスク（★）のポジション（★P）を取得
             // TODO ★P-1のタスクのidを取得（つまり、現状★のひとつ前にあるタスクのid）
             // TODO ★P-1のタスクのidをプロパティ「previous」として追加
