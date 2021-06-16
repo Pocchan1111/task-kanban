@@ -35,6 +35,12 @@
           ></v-progress-circular>
           <!-- 処理中表示END -->
           <v-btn icon @click="showNewDialog"><v-icon>mdi-plus</v-icon></v-btn>
+          <v-btn icon @click="goToMyGoogleCalendar"
+            ><v-icon>mdi-calendar</v-icon></v-btn
+          >
+          <v-btn icon @click="loadAllTaskData"
+            ><v-icon>mdi-reload</v-icon></v-btn
+          >
         </v-app-bar>
         <v-main>
           <v-container>
@@ -47,6 +53,15 @@
                   hide-details
                   dense
                   clearable
+                ></v-select>
+              </v-col>
+              <v-col cols="12" sm="6" md="4" lg="3" xl="2">
+                <v-select
+                  label="Classify"
+                  v-model="selectedOrderBy"
+                  :items="orderBys"
+                  hide-details
+                  dense
                 ></v-select>
               </v-col>
               <v-spacer></v-spacer>
@@ -123,6 +138,7 @@
                       @on-end="onEnd"
                       @show-detail-dialog="showDetailDialog"
                       @switch-is-processing="switchIsProcessing"
+                      ref="todayTasks"
                     ></task-cards>
                   </v-card-text>
                 </v-card>
@@ -187,15 +203,12 @@
             </v-row> -->
           </v-container>
           <!-- 編集ダイアログ -->
-          <v-dialog
-            v-model="dispDetailDialog"
-            max-width="800"
-            scrollable
-          >
+          <v-dialog v-model="dispDetailDialog" max-width="800" scrollable>
             <v-card>
               <v-card-title class="headline">
                 <v-text-field
                   v-model="detailShown.title"
+                  placeholder="タイトル空白のまま閉じた場合、作成/編集はキャンセル"
                   hide-details
                   dense
                   style="font-size: 20px"
@@ -240,6 +253,7 @@
                             readonly
                             v-bind="attrs"
                             v-on="on"
+                            clearable
                             hide-details
                             dense
                           ></v-text-field>
@@ -265,6 +279,7 @@
                             readonly
                             v-bind="attrs"
                             v-on="on"
+                            clearable
                             hide-details
                             dense
                           ></v-text-field>
@@ -277,9 +292,14 @@
                     </v-col>
                   </v-row>
                 </v-container>
-                <v-system-bar v-if="detailShown.id" color="grey lighten-2">Sub tasks</v-system-bar>
+                <v-system-bar v-if="detailShown.id" color="grey lighten-2"
+                  >Sub tasks</v-system-bar
+                >
                 <v-container v-if="detailShown.id">
-                  <v-row v-for="subTask in getSubTasks(detailShown.id)" :key="subTask.id">
+                  <v-row
+                    v-for="subTask in getSubTasks(detailShown.id)"
+                    :key="subTask.id"
+                  >
                     <v-col cols="auto" class="py-0 pr-0">
                       <v-checkbox
                         @change="onChangeSubTaskCheck(subTask.id);"
@@ -303,7 +323,13 @@
                   </v-row>
                   <v-row>
                     <v-col cols="auto" class="py-2">
-                      <v-btn text @click="createSubTask(detailShown.id)"><v-icon class="pr-1">mdi-plus</v-icon>Add sub task</v-btn>
+                      <v-btn
+                        text
+                        @click="createSubTask(detailShown.id, detailShown.tasklistId)"
+                      >
+                        <v-icon class="pr-1">mdi-plus</v-icon>
+                        Add sub task
+                      </v-btn>
                     </v-col>
                     <v-spacer></v-spacer>
                   </v-row>
@@ -329,7 +355,11 @@
           </v-dialog>
           <!-- 編集ダイアログEND -->
           <v-overlay :value="isLoading">
-            <v-progress-circular indeterminate size="64" color="white"></v-progress-circular>
+            <v-progress-circular
+              indeterminate
+              size="64"
+              color="white"
+            ></v-progress-circular>
           </v-overlay>
         </v-main>
       </v-app>

@@ -15,50 +15,45 @@
       >
         <v-row v-for="(task, index) in tasks" :key="task.id">
           <v-col>
-            <v-badge
-              style="width: 100%"
-              :value="getCardColor(task.deadline, task.plannedDate)"
-              :color="getCardColor(task.deadline, task.plannedDate)"
-              left
-              overlap
-            >
-              <v-card>
-                <v-card-title class="pa-2 pb-0" dense>
-                  <span class="body-1">{{task.icon}}</span>{{task.title}}
-                </v-card-title>
-                <v-card-text class="pa-2 pt-0 body-1">
-                  <v-row dense>
-                    <v-col class="py-0">
-                      <span v-if="getRemainDayNum(task.plannedDate) !== null">
-                        <span class="body-2">⚠️</span>
-                        {{getRemainDayNum(task.plannedDate)}}
-                      </span>
-                    </v-col>
-                    <v-col class="py-0">
-                      <span v-if="getRemainDayNum(task.deadline) !== null">
-                        <span class="body-2">💥</span>
-                        {{getRemainDayNum(task.deadline)}}
-                      </span>
-                    </v-col>
-                  </v-row>
-                  <v-row dense>
-                    <v-col class="py-0">
-                      <v-checkbox @change="onChangeWaiting(index);" label="Waiting" v-model="task.waiting" class="mt-0" dense hide-details></v-checkbox>
-                    </v-col>
-                    <v-col cols="auto" class="py-0">
-                      <v-btn @click="showDetailDialog(task.id)" icon small>
-                        <v-icon>mdi-pencil</v-icon>
-                      </v-btn>
-                    </v-col>
-                  </v-row>
-                  <v-row v-show="false">
-                    <v-col>
-                      <span id="taskId">{{task.id}}</span>
-                    </v-col>
-                  </v-row>
-                </v-card-text>
-              </v-card>
-            </v-badge>
+            <v-card :style="getCardBorderStyle(task.deadline, task.plannedDate)">
+              <v-card-title class="pa-2 pb-0" dense>
+                <span class="body-1">{{task.icon}}</span>{{task.title}}
+              </v-card-title>
+              <v-card-text class="pa-2 pt-0 body-1">
+                <v-row dense>
+                  <v-col class="py-0">
+                    <span v-if="getRemainDayNum(task.plannedDate) !== null">
+                      <span class="body-2">⚠️</span>
+                      {{getRemainDayNum(task.plannedDate)}}
+                    </span>
+                  </v-col>
+                  <v-col class="py-0">
+                    <span v-if="getRemainDayNum(task.deadline) !== null">
+                      <span class="body-2">💥</span>
+                      {{getRemainDayNum(task.deadline)}}
+                    </span>
+                  </v-col>
+                </v-row>
+                <v-row dense>
+                  <v-col class="py-0">
+                    <v-checkbox @change="onChangeWaiting(index);" label="Waiting" v-model="task.waiting" class="mt-0" dense hide-details></v-checkbox>
+                  </v-col>
+                  <v-col cols="auto" class="py-0">
+                    <v-icon v-if="task.note">mdi-text</v-icon>
+                  </v-col>
+                  <v-col cols="auto" class="py-0">
+                    <v-btn @click="showDetailDialog(task.id)" icon small>
+                      <v-icon>mdi-pencil</v-icon>
+                    </v-btn>
+                  </v-col>
+                </v-row>
+                <v-row v-show="false">
+                  <v-col>
+                    <span id="taskId">{{task.id}}</span>
+                  </v-col>
+                </v-row>
+              </v-card-text>
+            </v-card>
           </v-col>
         </v-row>
       </draggable>
@@ -73,7 +68,7 @@
       showDetailDialog: function (tgtId) {
         this.$emit('show-detail-dialog', tgtId);
       },
-      onChangeWaiting: function(index) {
+      onChangeWaiting: function (index) {
         this.$emit('switch-is-processing', true);
         const that = this;
         google.script.run
@@ -100,9 +95,28 @@
           return '';
         }
       },
+      getCardBorderStyle: function (deadline, plannedDate) {
+        let colorCode = 'E0E0E0';
+        const remainNum = this.getEitherRemainDayNum(deadline, plannedDate);
+        if (remainNum < 0) {
+          colorCode = 'B71C1C';
+        } else if (remainNum === 0) {
+          colorCode = 'FF5722';
+        } else if (remainNum === 1) {
+          colorCode = 'FF9800';
+        } else if (remainNum < 4) {
+          colorCode = 'FFCA28';
+        }
+        return 'border-left: solid 4px #' + colorCode + ' !important;';
+      },
       getRemainDayNum: function (tgtDate) {
         if (tgtDate) {
-          return Number(moment(tgtDate, 'YYYY-MM-DD').diff(moment(moment().format('YYYY-MM-DD') + 'T00:00:00'), 'd'));
+          return Number(
+            moment(tgtDate, 'YYYY-MM-DD').diff(
+              moment(moment().format('YYYY-MM-DD') + 'T00:00:00'),
+              'd'
+            )
+          );
         } else {
           return null;
         }
@@ -111,11 +125,17 @@
         if (deadline || plannedDate) {
           if (deadline) {
             return Number(
-              moment(deadline, 'YYYY-MM-DD').diff(moment(moment().format('YYYY-MM-DD') + 'T00:00:00'), 'd')
+              moment(deadline, 'YYYY-MM-DD').diff(
+                moment(moment().format('YYYY-MM-DD') + 'T00:00:00'),
+                'd'
+              )
             );
           } else {
             return Number(
-              moment(plannedDate, 'YYYY-MM-DD').diff(moment(moment().format('YYYY-MM-DD') + 'T00:00:00'), 'd')
+              moment(plannedDate, 'YYYY-MM-DD').diff(
+                moment(moment().format('YYYY-MM-DD') + 'T00:00:00'),
+                'd'
+              )
             );
           }
         } else {
@@ -145,6 +165,7 @@
         note: '',
       },
       shownTasklistId: '',
+      selectedOrderBy: 'Date',
       dispDetailDialog: false,
       dispDeadlinePicker: false,
       dispPlannedDatePicker: false,
@@ -157,12 +178,14 @@
         { text: 'In progress', value: 'inProgress' },
         { text: 'Done', value: 'done' },
       ],
-      titleRules: [
-        value => !!value || 'Required.',
+      orderBys: [
+        { text: 'Date', value: 'Date' },
+        { text: 'Custom', value: 'Custom' },
       ],
+      titleRules: [(value) => !!value || 'Required.'],
     },
     computed: {
-      classifies: function() {
+      classifies: function () {
         return Object.keys(this.tasklistInfo).map((id) => {
           const tmpTasklist = this.tasklistInfo[id];
           const icon = tmpTasklist.icon;
@@ -171,7 +194,7 @@
             value: id,
           };
         });
-      }
+      },
     },
     methods: {
       todoTasks: function () {
@@ -190,18 +213,37 @@
         return this.filterTasks('done');
       },
       onEnd: function (event) {
+        const targetElement = this.$refs[event.to.id];
         this.isProcessing = true;
-        const taskIdSpan = event.item.innerHTML.match(/<span id=\"taskId\">[a-zA-Z0-9!-~]*<\/span>/g)[0];
-        const taskId = taskIdSpan.replace(/<span id=\"taskId\">/g, '').replace(/<\/span>/g, '');
+        const taskIdSpan = event.item.innerHTML.match(
+          /<span id=\"taskId\">[a-zA-Z0-9!-~]*<\/span>/g
+        )[0];
+        const taskId = taskIdSpan
+          .replace(/<span id=\"taskId\">/g, '')
+          .replace(/<\/span>/g, '');
         const oldListName = event.from.id;
         const oldIndex = event.oldIndex;
         const newListName = event.to.id;
         const newIndex = event.newIndex;
-        if(oldListName !== newListName) {
+        if (
+          oldListName !== newListName ||
+          (oldIndex !== newIndex && this.selectedOrderBy === 'Custom')
+        ) {
           const tgtIndex = this.taskInfos.findIndex((taskInfo) => {
             return taskInfo.id === taskId;
           });
-          this.taskInfos[tgtIndex].customStatus = newListName.replace('Tasks', '');
+          // 対象タスクのステータスを変更
+          this.taskInfos[tgtIndex].customStatus = newListName.replace(
+            'Tasks',
+            ''
+          );
+          if (this.selectedOrderBy === 'Custom') {
+            // TODO 自分の後ろに並んでいるタスク（★）のポジション（★P）を取得
+            // TODO ★P-1のタスクのidを取得（つまり、現状★のひとつ前にあるタスクのid）
+            // TODO ★P-1のタスクのidをプロパティ「previous」として追加
+            // TODO （サーバサイド）previousの値があったら、moveを実行する
+            // TODO （サーバサイド）moveを実行したタスクリストのタスク情報を全部返す（＝ポジション値を更新）
+          }
           google.script.run
             .withSuccessHandler((res) => {
               execAfterUpsertProcess(res);
@@ -211,12 +253,24 @@
         }
       },
       filterTasks: function (customStatusStr) {
-        let tmpTasks = this.taskInfos.filter((task) => {
-          return !this.shownTasklistId || task.tasklistId === this.shownTasklistId;
-        }).filter((task) => {
-          return !task.parent && task.customStatus === customStatusStr;
-        });
-        return tmpTasks && tmpTasks.length > 0 ? tmpTasks.sort(compareWithDate) : tmpTasks;
+        let tmpTasks = this.taskInfos
+          .filter((task) => {
+            return (
+              !this.shownTasklistId || task.tasklistId === this.shownTasklistId
+            );
+          })
+          .filter((task) => {
+            return !task.parent && task.customStatus === customStatusStr;
+          });
+        if (this.selectedOrderBy === 'Date') {
+          return tmpTasks && tmpTasks.length > 0
+            ? tmpTasks.sort(compareWithDate)
+            : tmpTasks;
+        } else {
+          return tmpTasks && tmpTasks.length > 0
+            ? tmpTasks.sort(compareWithPosition)
+            : tmpTasks;
+        }
       },
       showDetailDialog: function (tgtId) {
         const tgtIndex = this.taskInfos.findIndex((taskInfo) => {
@@ -238,17 +292,21 @@
         };
         this.dispDetailDialog = true;
       },
-      getSubTasks: function(taskId) {
-        return this.taskInfos.filter((taskInfo) => {
-          return taskInfo.parent  === taskId;
-        }) || [];
+      getSubTasks: function (taskId) {
+        return (
+          this.taskInfos
+            .filter((taskInfo) => {
+              return taskInfo.parent === taskId;
+            })
+            .sort(compareWithPosition) || []
+        );
       },
-      createSubTask: function(parentId) {
+      createSubTask: function (parentId, parentTasklistId) {
         const initTask = {
           id: '',
           title: '',
           customStatus: 'todo',
-          tasklistId: this.classifies[0].value,
+          tasklistId: parentTasklistId,
           parent: parentId,
           deadline: '',
           plannedDate: '',
@@ -262,13 +320,13 @@
           })
           .upsertTask([initTask]);
       },
-      onChangeSubTaskCheck: function(taskId) {
+      onChangeSubTaskCheck: function (taskId) {
         const tgtIndex = this.taskInfos.findIndex((taskInfo) => {
           return taskInfo.id === taskId;
         });
         // console.log(this.taskInfos[tgtIndex].status);
         // console.log('↓');
-        if(this.taskInfos[tgtIndex].status === 'completed') {
+        if (this.taskInfos[tgtIndex].status === 'completed') {
           this.taskInfos[tgtIndex].status = 'needsAction';
           this.taskInfos[tgtIndex].customStatus = 'todo';
         } else {
@@ -277,41 +335,47 @@
         }
         // console.log(this.taskInfos[tgtIndex].status);
       },
-      switchIsProcessing: function(value) {
+      switchIsProcessing: function (value) {
         this.isProcessing = value;
       },
-      updateTaskById: function(task) {
+      updateTaskById: function (task) {
         const tgtId = task.beforeId ? task.beforeId : task.id;
         const tgtIndex = this.taskInfos.findIndex((taskInfo) => {
           return taskInfo.id === tgtId;
         });
-        if(tgtIndex === -1) {
+        if (tgtIndex === -1) {
           this.taskInfos.push(task);
         } else {
           this.taskInfos[tgtIndex] = task;
         }
       },
+      goToMyGoogleCalendar: function () {
+        window.open('https://calendar.google.com/calendar/u/0/r', '_blank');
+      },
+      loadAllTaskData: function () {
+        this.isLoading = true;
+        google.script.run
+          .withSuccessHandler((res) => {
+            vm.tasklistInfo = JSON.parse(res);
+            // console.log(vm.tasklistInfo);
+          })
+          .getTasklistInfo();
+        google.script.run
+          .withSuccessHandler((res) => {
+            vm.taskInfos = JSON.parse(res);
+            vm.isLoading = false;
+            // console.log(vm.taskInfos);
+          })
+          .getAllTaskInfos();
+      },
     },
-    mounted: function(){
-      this.isLoading = true;
-      google.script.run
-        .withSuccessHandler((res) => {
-          vm.tasklistInfo = JSON.parse(res);
-          // console.log(vm.tasklistInfo);
-        })
-        .getTasklistInfo();
-      google.script.run
-        .withSuccessHandler((res) => {
-          vm.taskInfos = JSON.parse(res);
-          vm.isLoading = false;
-          // console.log(vm.taskInfos);
-        })
-        .getAllTaskInfos();
+    mounted: function () {
+      this.loadAllTaskData();
     },
     watch: {
-      dispDetailDialog: function(newval, oldVal) {
-        // 閉じられた場合
-        if(!newval){
+      dispDetailDialog: function (newval, oldVal) {
+        // 閉じられたかつタイトルがある場合（タイトルがある場合はキャンセル扱いとするため）
+        if (!newval && this.detailShown.title) {
           this.isProcessing = true;
           let tgtTasks = this.getSubTasks(this.detailShown.id);
           tgtTasks.push(this.detailShown);
@@ -326,15 +390,18 @@
       },
     },
   });
+  window.vm = vm;
   function execAfterUpsertProcess(res) {
     const tmpRes = JSON.parse(res);
     console.log(tmpRes);
-    if(tmpRes.errors) {
-      tmpRes.errors.forEach((error) => {
-        console.log(error.process);
+    if (tmpRes.errors) {
+      tmpRes.errors.forEach((error, index) => {
+        console.error('------Error' + index + '------');
+        console.log('process: ' + error.process);
         console.table(error.error);
         console.table(error.taskInfo);
       });
+      console.error('-----------------');
     } else {
       tmpRes.taskInfos.forEach((taskInfo) => {
         console.table(taskInfo);
@@ -349,18 +416,31 @@
     const dayB = b.deadline ? b.deadline.toString() : b.plannedDate.toString();
     // 空白の場合は急がないタスクなので後ろに回す
     let comparison = 0;
-    if(dayA && dayB) {
+    if (dayA && dayB) {
       if (dayA > dayB) {
         comparison = 1;
       } else if (dayA < dayB) {
         comparison = -1;
       }
-    // dayBが空白の場合
-    } else if(dayA) {
+      // dayBが空白の場合
+    } else if (dayA) {
       comparison = -1;
-    // dayAが空白の場合
+      // dayAが空白の場合
     } else {
       comparison = 1;
+    }
+    return comparison;
+  }
+  function compareWithPosition(a, b) {
+    // Use toUpperCase() to ignore character casing
+    const positionA = a.position;
+    const positionB = b.position;
+    // 空白の場合は急がないタスクなので後ろに回す
+    let comparison = 0;
+    if (positionA > positionB) {
+      comparison = 1;
+    } else if (positionA < positionB) {
+      comparison = -1;
     }
     return comparison;
   }
