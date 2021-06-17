@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <base target="_top" />
+    <base target="_blank" />
     <link
       href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900"
       rel="stylesheet"
@@ -35,40 +35,75 @@
           ></v-progress-circular>
           <!-- 処理中表示END -->
           <v-btn icon @click="showNewDialog"><v-icon>mdi-plus</v-icon></v-btn>
-          <v-btn icon @click="goToMyGoogleCalendar"
+          <v-btn icon href="https://calendar.google.com/calendar/u/0/r"
             ><v-icon>mdi-calendar</v-icon></v-btn
+          >
+          <v-btn
+            icon
+            href="https://docs.google.com/spreadsheets/d/<?= ssId ?>/edit"
+            ><v-icon>mdi-google-spreadsheet</v-icon></v-btn
           >
           <v-btn icon @click="loadAllTaskData"
             ><v-icon>mdi-reload</v-icon></v-btn
           >
         </v-app-bar>
         <v-main>
-          <v-container>
-            <v-row class="mt-1">
-              <v-col cols="12" sm="6" md="4" lg="3" xl="2">
-                <v-select
-                  label="Classify"
-                  v-model="shownTasklistId"
-                  :items="classifies"
-                  hide-details
-                  dense
-                  clearable
-                ></v-select>
+          <v-container fluid>
+            <!-- カンバンより上部分 START -->
+            <v-row class="mt-1" justify="center">
+              <v-col :cols="topCardWidth">
+                <v-card>
+                  <v-card-text>
+                    <v-row>
+                      <v-col cols="12" sm="5" md="4" lg="3">
+                        <v-select
+                          label="Order by"
+                          v-model="selectedOrderBy"
+                          :items="orderBys"
+                          hide-details
+                          dense
+                        ></v-select>
+                      </v-col>
+                      <v-col cols="auto" class="pl-2">
+                        <v-switch
+                          v-model="showNote"
+                          label="Show note"
+                          class="mt-1"
+                          inset
+                          hide-details
+                          dense
+                        ></v-switch>
+                      </v-col>
+                    </v-row>
+                    <v-row>
+                      <v-col cols="12" sm="5" md="4" lg="3">
+                        <v-select
+                          label="Classify"
+                          v-model="shownTasklistId"
+                          :items="classifies"
+                          hide-details
+                          dense
+                          clearable
+                        ></v-select>
+                      </v-col>
+                    </v-row>
+                    <v-expand-transition>
+                      <v-row
+                        v-if="shownTasklistId && tasklistInfo[shownTasklistId].description"
+                      >
+                        <v-col>
+                          {{tasklistInfo[shownTasklistId].description}}
+                        </v-col>
+                      </v-row>
+                    </v-expand-transition>
+                  </v-card-text>
+                </v-card>
               </v-col>
-              <v-col cols="12" sm="6" md="4" lg="3" xl="2">
-                <v-select
-                  label="Classify"
-                  v-model="selectedOrderBy"
-                  :items="orderBys"
-                  hide-details
-                  dense
-                ></v-select>
-              </v-col>
-              <v-spacer></v-spacer>
             </v-row>
-            <v-row>
-              <v-col>
-                <v-card color="lime lighten-5" min-height="500">
+            <!-- カンバンより上部分 END -->
+            <v-row justify="center">
+              <v-col :cols="kanbanWidth">
+                <v-card color="green lighten-5" min-height="500">
                   <v-card-title>
                     <v-row>
                       <v-col>Todo</v-col>
@@ -85,6 +120,7 @@
                       :tasks="todoTasks()"
                       groupname="myGroup"
                       draggableid="todoTasks"
+                      :shownote="showNote"
                       @on-end="onEnd"
                       @show-detail-dialog="showDetailDialog"
                       @switch-is-processing="switchIsProcessing"
@@ -92,8 +128,8 @@
                   </v-card-text>
                 </v-card>
               </v-col>
-              <v-col>
-                <v-card color="light-green lighten-5" min-height="500">
+              <v-col :cols="kanbanWidth" v-if="'<?= useThisWeek ?>' === 'true'">
+                <v-card color="teal lighten-5" min-height="500">
                   <v-card-title>
                     <v-row>
                       <v-col>This week</v-col>
@@ -110,6 +146,7 @@
                       :tasks="thisWeekTasks()"
                       groupname="myGroup"
                       draggableid="thisWeekTasks"
+                      :shownote="showNote"
                       @on-end="onEnd"
                       @show-detail-dialog="showDetailDialog"
                       @switch-is-processing="switchIsProcessing"
@@ -117,8 +154,8 @@
                   </v-card-text>
                 </v-card>
               </v-col>
-              <v-col>
-                <v-card color="green lighten-5" min-height="500">
+              <v-col :cols="kanbanWidth" v-if="'<?= useToday ?>' === 'true'">
+                <v-card color="cyan lighten-5" min-height="500">
                   <v-card-title>
                     <v-row>
                       <v-col>Today</v-col>
@@ -135,6 +172,7 @@
                       :tasks="todayTasks()"
                       groupname="myGroup"
                       draggableid="todayTasks"
+                      :shownote="showNote"
                       @on-end="onEnd"
                       @show-detail-dialog="showDetailDialog"
                       @switch-is-processing="switchIsProcessing"
@@ -143,7 +181,7 @@
                   </v-card-text>
                 </v-card>
               </v-col>
-              <v-col>
+              <v-col :cols="kanbanWidth">
                 <v-card color="blue lighten-5" min-height="500">
                   <v-card-title>
                     <v-row>
@@ -161,6 +199,7 @@
                       :tasks="inProgressTasks()"
                       groupname="myGroup"
                       draggableid="inProgressTasks"
+                      :shownote="showNote"
                       @on-end="onEnd"
                       @show-detail-dialog="showDetailDialog"
                       @switch-is-processing="switchIsProcessing"
@@ -168,7 +207,7 @@
                   </v-card-text>
                 </v-card>
               </v-col>
-              <v-col>
+              <v-col :cols="kanbanWidth">
                 <v-card color="grey lighten-2" min-height="500">
                   <v-card-title>
                     <v-row>
@@ -186,6 +225,7 @@
                       :tasks="doneTasks()"
                       groupname="myGroup"
                       draggableid="doneTasks"
+                      :shownote="showNote"
                       @on-end="onEnd"
                       @show-detail-dialog="showDetailDialog"
                       @switch-is-processing="switchIsProcessing"
@@ -194,13 +234,6 @@
                 </v-card>
               </v-col>
             </v-row>
-            <!-- <v-row>
-              <v-col> {{todoTasks()}} </v-col>
-              <v-col> {{thisWeekTasks()}} </v-col>
-              <v-col> {{todayTasks()}} </v-col>
-              <v-col> {{inProgressTasks()}} </v-col>
-              <v-col> {{doneTasks()}} </v-col>
-            </v-row> -->
           </v-container>
           <!-- 編集ダイアログ -->
           <v-dialog v-model="dispDetailDialog" max-width="800" scrollable>
@@ -364,6 +397,10 @@
         </v-main>
       </v-app>
     </div>
+    <script>
+      const useThisWeek = '<?= useThisWeek ?>';
+      const useToday = '<?= useToday ?>';
+    </script>
     <?!= include('js'); ?>
   </body>
 </html>

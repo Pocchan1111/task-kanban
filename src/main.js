@@ -1,20 +1,10 @@
-function test() {
-  // let taskObj = {
-  //   title: 'にょん',
-  //   // ここは+09:00にすると何故か1日前になってしまう
-  //   due: '2021-06-30T00:00:00+00:00',
-  //   status: 'needsAction',
-  //   parent: 'VXZJamJjMWZ1QTRWY2pYWQ',
-  //   notes: 'にゃー',
-  // };
-  // Tasks.Tasks.insert(taskObj, 'MDA1NjM2MDMzNjkzMjA2MDEwNjc6MDow', {parent: 'VXZJamJjMWZ1QTRWY2pYWQ'});
-  // console.log(getAllTaskInfoList());
-  Tasks.Tasks.move('MmJ0ZGxWUXZVaS1lWGE0WQ', 'TUhMQ1Q0STM0cm9uMG9scQ');
-}
+function test() {}
 
 function doGet(e) {
   let htmlTemplate = HtmlService.createTemplateFromFile('index');
-  // htmlTemplate.fileid = fileid;
+  htmlTemplate.ssId = THIS_BOOK.getId();
+  htmlTemplate.useThisWeek = SETTING_DIC['USE_THIS_WEEK'];
+  htmlTemplate.useToday = SETTING_DIC['USE_TODAY'];
   let htmlOutput = htmlTemplate.evaluate();
   htmlOutput.setTitle('My Task Board');
   return htmlOutput;
@@ -24,7 +14,7 @@ function include(filename) {
   return HtmlService.createHtmlOutputFromFile(filename).getContent();
 }
 
-function writeAllTasklistToSheet() {
+function exportAllTasklistToSheet() {
   const lastRow = SHEET_TASKLIST.getLastRow();
   const prvTasklists =
     lastRow === 1
@@ -38,8 +28,9 @@ function writeAllTasklistToSheet() {
   const prvTasklistObj = prvTasklists.reduce((previous, current) => {
     previous[current[0]] = {
       title: current[1],
-      icon: current[2],
+      prefix: current[2],
       isSubject: current[3],
+      description: current[4],
     };
     return previous;
   }, {});
@@ -47,15 +38,20 @@ function writeAllTasklistToSheet() {
   const crntTasklistObj = crntTasklists.reduce((previous, current) => {
     previous[current.id] = {
       title: current.title,
-      icon: prvTasklistObj[current.id] ? prvTasklistObj[current.id].icon : '',
+      prefix: prvTasklistObj[current.id]
+        ? prvTasklistObj[current.id].prefix
+        : '',
       isSubject: prvTasklistObj[current.id]
         ? prvTasklistObj[current.id].isSubject
         : '◯',
+      description: prvTasklistObj[current.id]
+        ? prvTasklistObj[current.id].description
+        : '',
     };
     return previous;
   }, {});
   const newTasklists = Object.keys(crntTasklistObj).map((key) => {
-    return [key, crntTasklistObj[key].title, crntTasklistObj[key].icon];
+    return [key, crntTasklistObj[key].title, crntTasklistObj[key].prefix];
   });
   if (newTasklists.length > 0) {
     SHEET_TASKLIST.getRange(
@@ -113,7 +109,7 @@ function convTaskToTaskInfo(task, tasklistId, taskListObj) {
   return {
     id: task.id,
     title: task.title,
-    icon: taskListObj[tasklistId] ? taskListObj[tasklistId].icon : '⚪',
+    prefix: taskListObj[tasklistId] ? taskListObj[tasklistId].prefix : '⚪',
     status: task.status,
     customStatus: task.status === 'completed' ? 'done' : customStatus,
     // completed: task.completed,
@@ -140,12 +136,13 @@ function getTasklistObj() {
         ).getValues();
   return tasklists
     .filter((tasklist) => {
-      return tasklist[3] === '◯';
+      return tasklist[0] && tasklist[3] === '◯';
     })
     .reduce((previous, current) => {
       previous[current[0]] = {
         title: current[1],
-        icon: current[2] || '⚪',
+        prefix: current[2] || '⚪',
+        description: current[4],
       };
       return previous;
     }, {});

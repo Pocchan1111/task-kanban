@@ -5,7 +5,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Vue.Draggable/2.20.0/vuedraggable.umd.min.js"></script>
 <script>
   let TaskCards = {
-    props: ['tasks', 'groupname', 'draggableid'],
+    props: ['tasks', 'groupname', 'draggableid', 'shownote'],
     template: `
       <draggable
         :group="groupname"
@@ -17,7 +17,7 @@
           <v-col>
             <v-card :style="getCardBorderStyle(task.deadline, task.plannedDate)">
               <v-card-title class="pa-2 pb-0" dense>
-                <span class="body-1">{{task.icon}}</span>{{task.title}}
+                <span class="body-1">{{task.prefix}}</span>{{task.title}}
               </v-card-title>
               <v-card-text class="pa-2 pt-0 body-1">
                 <v-row dense>
@@ -34,12 +34,24 @@
                     </span>
                   </v-col>
                 </v-row>
+                <v-row v-if="shownote && task.note" dense class="caption">
+                  <v-col cols="12" class="pl-1 text-truncate">
+                    {{splitLf(task.note)}}
+                  </v-col>
+                </v-row>
                 <v-row dense>
                   <v-col class="py-0">
-                    <v-checkbox @change="onChangeWaiting(index);" label="Waiting" v-model="task.waiting" class="mt-0" dense hide-details></v-checkbox>
+                    <v-checkbox
+                      @change="onChangeWaiting(index);"
+                      label="Waiting"
+                      v-model="task.waiting"
+                      class="mt-0"
+                      dense
+                      hide-details
+                    ></v-checkbox>
                   </v-col>
-                  <v-col cols="auto" class="py-0">
-                    <v-icon v-if="task.note">mdi-text</v-icon>
+                  <v-col v-if="!shownote && task.note" cols="auto" class="py-0">
+                    <v-icon>mdi-text</v-icon>
                   </v-col>
                   <v-col cols="auto" class="py-0">
                     <v-btn @click="showDetailDialog(task.id)" icon small>
@@ -78,25 +90,8 @@
           })
           .upsertTask([this.tasks[index]]);
       },
-      getCardColor: function (deadline, plannedDate) {
-        const remainNum = this.getEitherRemainDayNum(deadline, plannedDate);
-        if (remainNum === null) {
-          return '';
-        }
-        if (remainNum < 0) {
-          return 'red darken-4';
-        } else if (remainNum === 0) {
-          return 'deep-orange';
-        } else if (remainNum === 1) {
-          return 'orange';
-        } else if (remainNum < 4) {
-          return 'amber';
-        } else {
-          return '';
-        }
-      },
       getCardBorderStyle: function (deadline, plannedDate) {
-        let colorCode = 'E0E0E0';
+        let colorCode = 'CFD8DC';
         const remainNum = this.getEitherRemainDayNum(deadline, plannedDate);
         if (remainNum < 0) {
           colorCode = 'B71C1C';
@@ -107,7 +102,7 @@
         } else if (remainNum < 4) {
           colorCode = 'FFCA28';
         }
-        return 'border-left: solid 4px #' + colorCode + ' !important;';
+        return 'border-left: solid 5px #' + colorCode + ' !important;';
       },
       getRemainDayNum: function (tgtDate) {
         if (tgtDate) {
@@ -142,6 +137,9 @@
           return null;
         }
       },
+      splitLf: function (str) {
+        return str.split('\n')[0];
+      },
     },
   };
 
@@ -166,6 +164,7 @@
       },
       shownTasklistId: '',
       selectedOrderBy: 'Date',
+      showNote: false,
       dispDetailDialog: false,
       dispDeadlinePicker: false,
       dispPlannedDatePicker: false,
@@ -188,12 +187,27 @@
       classifies: function () {
         return Object.keys(this.tasklistInfo).map((id) => {
           const tmpTasklist = this.tasklistInfo[id];
-          const icon = tmpTasklist.icon;
           return {
-            text: icon + tmpTasklist.title,
+            text: tmpTasklist.prefix + tmpTasklist.title,
             value: id,
           };
         });
+      },
+      kanbanWidth: function () {
+        if (useThisWeek === 'true' && useToday === 'true') {
+          return 2;
+        } else {
+          return 3;
+        }
+      },
+      topCardWidth: function () {
+        if (useThisWeek === 'true' && useToday === 'true') {
+          return 10;
+        } else if (useThisWeek === 'true' || useToday === 'true') {
+          return 12;
+        } else {
+          return 9;
+        }
       },
     },
     methods: {
@@ -340,8 +354,6 @@
         const tgtIndex = this.taskInfos.findIndex((taskInfo) => {
           return taskInfo.id === taskId;
         });
-        // console.log(this.taskInfos[tgtIndex].status);
-        // console.log('↓');
         if (this.taskInfos[tgtIndex].status === 'completed') {
           this.taskInfos[tgtIndex].status = 'needsAction';
           this.taskInfos[tgtIndex].customStatus = 'todo';
@@ -349,7 +361,6 @@
           this.taskInfos[tgtIndex].status = 'completed';
           this.taskInfos[tgtIndex].customStatus = 'done';
         }
-        // console.log(this.taskInfos[tgtIndex].status);
       },
       switchIsProcessing: function (value) {
         this.isProcessing = value;
@@ -365,22 +376,17 @@
           this.taskInfos[tgtIndex] = task;
         }
       },
-      goToMyGoogleCalendar: function () {
-        window.open('https://calendar.google.com/calendar/u/0/r', '_blank');
-      },
       loadAllTaskData: function () {
         this.isLoading = true;
         google.script.run
           .withSuccessHandler((res) => {
             vm.tasklistInfo = JSON.parse(res);
-            // console.log(vm.tasklistInfo);
           })
           .getTasklistInfo();
         google.script.run
           .withSuccessHandler((res) => {
             vm.taskInfos = JSON.parse(res);
             vm.isLoading = false;
-            // console.log(vm.taskInfos);
           })
           .getAllTaskInfos();
       },
@@ -395,7 +401,6 @@
           this.isProcessing = true;
           let tgtTasks = this.getSubTasks(this.detailShown.id);
           tgtTasks.push(this.detailShown);
-          // console.log(tgtTasks);
           google.script.run
             .withSuccessHandler((res) => {
               execAfterUpsertProcess(res);
@@ -409,11 +414,10 @@
   window.vm = vm;
   function execAfterUpsertProcess(res) {
     const tmpRes = JSON.parse(res);
-    console.log(tmpRes);
     if (tmpRes.errors) {
       tmpRes.errors.forEach((error, index) => {
         console.error('------Error' + index + '------');
-        console.log('process: ' + error.process);
+        console.info('process: ' + error.process);
         console.table(error.error);
         console.table(error.taskInfo);
       });
