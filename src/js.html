@@ -17,7 +17,7 @@
           <v-col>
             <v-card :style="getCardBorderStyle(task.deadline, task.plannedDate)">
               <v-card-title class="pa-2 pb-0" dense>
-                <span class="body-1">{{task.prefix}}</span>{{task.title}}
+                <span class="body-1 pr-1">{{task.prefix}}</span>{{task.title}}
               </v-card-title>
               <v-card-text class="pa-2 pt-0 body-1">
                 <v-row dense>
@@ -54,7 +54,7 @@
                     <v-icon>mdi-text</v-icon>
                   </v-col>
                   <v-col cols="auto" class="py-0">
-                    <v-btn @click="showDetailDialog(task.id)" icon small>
+                    <v-btn @click="showEditTaskDialog(task.id)" icon small>
                       <v-icon>mdi-pencil</v-icon>
                     </v-btn>
                   </v-col>
@@ -77,7 +77,7 @@
       onEnd: function (event) {
         this.$emit('on-end', event);
       },
-      showDetailDialog: function (tgtId) {
+      showEditTaskDialog: function (tgtId) {
         this.$emit('show-detail-dialog', tgtId);
       },
       onChangeWaiting: function (index) {
@@ -93,14 +93,16 @@
       getCardBorderStyle: function (deadline, plannedDate) {
         let colorCode = 'CFD8DC';
         const remainNum = this.getEitherRemainDayNum(deadline, plannedDate);
-        if (remainNum < 0) {
-          colorCode = 'B71C1C';
-        } else if (remainNum === 0) {
-          colorCode = 'FF5722';
-        } else if (remainNum === 1) {
-          colorCode = 'FF9800';
-        } else if (remainNum < 4) {
-          colorCode = 'FFCA28';
+        if (typeof remainNum === 'number') {
+          if (remainNum < 0) {
+            colorCode = 'B71C1C';
+          } else if (remainNum === 0) {
+            colorCode = 'FF5722';
+          } else if (remainNum === 1) {
+            colorCode = 'FF9800';
+          } else if (remainNum < 4) {
+            colorCode = 'FFCA28';
+          }
         }
         return 'border-left: solid 5px #' + colorCode + ' !important;';
       },
@@ -152,7 +154,7 @@
     data: {
       taskInfos: [],
       tasklistInfo: {},
-      detailShown: {
+      taskInDialog: {
         id: '',
         title: '',
         customStatus: '',
@@ -162,10 +164,17 @@
         waiting: '',
         note: '',
       },
+      tasklistInDialog: {
+        id: '',
+        title: '',
+        prefix: '',
+        description: '',
+      },
       shownTasklistId: '',
       selectedOrderBy: 'Date',
       showNote: false,
-      dispDetailDialog: false,
+      dispTaskDialog: false,
+      dispTasklistDialog: false,
       dispDeadlinePicker: false,
       dispPlannedDatePicker: false,
       isLoading: false,
@@ -181,14 +190,13 @@
         { text: 'Date', value: 'Date' },
         { text: 'Custom', value: 'Custom' },
       ],
-      titleRules: [(value) => !!value || 'Required.'],
     },
     computed: {
       classifies: function () {
         return Object.keys(this.tasklistInfo).map((id) => {
           const tmpTasklist = this.tasklistInfo[id];
           return {
-            text: tmpTasklist.prefix + tmpTasklist.title,
+            text: tmpTasklist.prefix + ' ' + tmpTasklist.title,
             value: id,
           };
         });
@@ -252,6 +260,10 @@
             'Tasks',
             ''
           );
+          this.taskInfos[tgtIndex].status =
+            this.taskInfos[tgtIndex].customStatus === 'done'
+              ? 'completed'
+              : 'needsAction';
           if (this.shownTasklistId && this.selectedOrderBy === 'Custom') {
             if (newIndex === 0) {
               // 一番前に持ってくるため
@@ -268,11 +280,6 @@
                 .replace(/<\/span>/g, '');
               this.taskInfos[tgtIndex].previous = previousTaskId;
             }
-            // TODO 自分の後ろに並んでいるタスク（★）のポジション（★P）を取得
-            // TODO ★P-1のタスクのidを取得（つまり、現状★のひとつ前にあるタスクのid）
-            // TODO ★P-1のタスクのidをプロパティ「previous」として追加
-            // TODO （サーバサイド）previousの値があったら、moveを実行する
-            // TODO （サーバサイド）moveを実行したタスクリストのタスク情報を全部返す（＝ポジション値を更新）
           }
           google.script.run
             .withSuccessHandler((res) => {
@@ -302,25 +309,45 @@
             : tmpTasks;
         }
       },
-      showDetailDialog: function (tgtId) {
+      showEditTaskDialog: function (tgtId) {
         const tgtIndex = this.taskInfos.findIndex((taskInfo) => {
           return taskInfo.id === tgtId;
         });
-        this.detailShown = this.taskInfos[tgtIndex];
-        this.dispDetailDialog = true;
+        this.taskInDialog = this.taskInfos[tgtIndex];
+        this.dispTaskDialog = true;
       },
-      showNewDialog: function () {
-        this.detailShown = {
+      showCreateTaskDialog: function (customStatus) {
+        this.taskInDialog = {
           id: '',
           title: '',
-          customStatus: 'todo',
+          customStatus: customStatus || 'todo',
+          status: customStatus === 'done' ? 'completed' : 'needsAction',
           tasklistId: this.classifies[0].value,
           deadline: '',
           plannedDate: '',
           waiting: false,
           note: '',
         };
-        this.dispDetailDialog = true;
+        this.dispTaskDialog = true;
+      },
+      showEditTasklistDialog: function () {
+        const tgtTasklistInfo = this.tasklistInfo[this.shownTasklistId];
+        this.tasklistInDialog = {
+          id: this.shownTasklistId,
+          title: this.tasklistInfo[this.shownTasklistId].title,
+          prefix: this.tasklistInfo[this.shownTasklistId].prefix,
+          description: this.tasklistInfo[this.shownTasklistId].description,
+        };
+        this.dispTasklistDialog = true;
+      },
+      showCreateTasklistDialog: function () {
+        this.tasklistInDialog = {
+          id: '',
+          title: '',
+          prefix: '',
+          description: '',
+        };
+        this.dispTasklistDialog = true;
       },
       getSubTasks: function (taskId) {
         return (
@@ -336,6 +363,7 @@
           id: '',
           title: '',
           customStatus: 'todo',
+          status: 'needsAction',
           tasklistId: parentTasklistId,
           parent: parentId,
           deadline: '',
@@ -378,9 +406,17 @@
       },
       loadAllTaskData: function () {
         this.isLoading = true;
+        this.selectedOrderBy = defaultOrder;
+        console.log('* ' + showNote);
+        this.showNote = Boolean(showNote);
         google.script.run
           .withSuccessHandler((res) => {
             vm.tasklistInfo = JSON.parse(res);
+            vm.shownTasklistId = defaultClassify
+              ? Object.keys(vm.tasklistInfo).find((key) => {
+                  return vm.tasklistInfo[key].title === defaultClassify;
+                }) || ''
+              : '';
           })
           .getTasklistInfo();
         google.script.run
@@ -395,18 +431,30 @@
       this.loadAllTaskData();
     },
     watch: {
-      dispDetailDialog: function (newval, oldVal) {
+      dispTaskDialog: function (newval, oldVal) {
         // 閉じられたかつタイトルがある場合（タイトルがある場合はキャンセル扱いとするため）
-        if (!newval && this.detailShown.title) {
+        if (!newval && this.taskInDialog.title) {
           this.isProcessing = true;
-          let tgtTasks = this.getSubTasks(this.detailShown.id);
-          tgtTasks.push(this.detailShown);
+          let tgtTasks = this.getSubTasks(this.taskInDialog.id);
+          tgtTasks.push(this.taskInDialog);
           google.script.run
             .withSuccessHandler((res) => {
               execAfterUpsertProcess(res);
               vm.isProcessing = false;
             })
             .upsertTask(tgtTasks);
+        }
+      },
+      dispTasklistDialog: function (newval, oldVal) {
+        // 閉じられたかつタイトルがある場合（タイトルがある場合はキャンセル扱いとするため）
+        if (!newval && this.tasklistInDialog.title) {
+          this.isProcessing = true;
+          google.script.run
+            .withSuccessHandler((res) => {
+              vm.tasklistInfo = JSON.parse(res);
+              vm.isProcessing = false;
+            })
+            .upsertTasklist(this.tasklistInDialog);
         }
       },
     },

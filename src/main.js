@@ -1,12 +1,20 @@
 function test() {}
 
 function doGet(e) {
+  const pageTitle = SETTING_DIC['PAGE_TITLE'].toString() || 'My Task Kanban';
   let htmlTemplate = HtmlService.createTemplateFromFile('index');
   htmlTemplate.ssId = THIS_BOOK.getId();
   htmlTemplate.useThisWeek = SETTING_DIC['USE_THIS_WEEK'];
   htmlTemplate.useToday = SETTING_DIC['USE_TODAY'];
+  htmlTemplate.defaultOrder = SETTING_DIC['DEFAULT_ORDER'];
+  htmlTemplate.defaultClassify = SETTING_DIC['DEFAULT_CLASSIFY'];
+  htmlTemplate.showNote =
+    SETTING_DIC['SHOW_NOTE'].toString() === 'true'
+      ? SETTING_DIC['SHOW_NOTE']
+      : '';
+  htmlTemplate.pageTitle = pageTitle;
   let htmlOutput = htmlTemplate.evaluate();
-  htmlOutput.setTitle('My Task Board');
+  htmlOutput.setTitle(pageTitle);
   return htmlOutput;
 }
 
@@ -25,33 +33,52 @@ function exportAllTasklistToSheet() {
           SHEET_TASKLIST.getLastRow() - 1,
           SHEET_TASKLIST.getLastColumn()
         ).getValues();
-  const prvTasklistObj = prvTasklists.reduce((previous, current) => {
-    previous[current[0]] = {
-      title: current[1],
-      prefix: current[2],
-      isSubject: current[3],
-      description: current[4],
-    };
-    return previous;
-  }, {});
+  if (SHEET_TASKLIST.getLastRow() > 0) {
+    SHEET_TASKLIST.getRange(
+      2,
+      1,
+      SHEET_TASKLIST.getLastRow() - 1,
+      SHEET_TASKLIST.getLastColumn()
+    ).clearContent();
+  }
+  const prvTasklistObj = prvTasklists
+    .filter((prvTasklist) => {
+      return prvTasklist[0];
+    })
+    .reduce((previous, current) => {
+      previous[current[0]] = {
+        title: current[1],
+        prefix: current[2],
+        isSubject: current[3],
+        description: current[4],
+      };
+      return previous;
+    }, {});
   const crntTasklists = Tasks.Tasklists.list({ maxResults: 100 }).items;
   const crntTasklistObj = crntTasklists.reduce((previous, current) => {
     previous[current.id] = {
       title: current.title,
-      prefix: prvTasklistObj[current.id]
-        ? prvTasklistObj[current.id].prefix
-        : '',
-      isSubject: prvTasklistObj[current.id]
-        ? prvTasklistObj[current.id].isSubject
-        : '◯',
-      description: prvTasklistObj[current.id]
-        ? prvTasklistObj[current.id].description
-        : '',
+      prefix:
+        current.id in prvTasklistObj ? prvTasklistObj[current.id].prefix : '',
+      isSubject:
+        current.id in prvTasklistObj
+          ? prvTasklistObj[current.id].isSubject
+          : '◯',
+      description:
+        current.id in prvTasklistObj
+          ? prvTasklistObj[current.id].description
+          : '',
     };
     return previous;
   }, {});
   const newTasklists = Object.keys(crntTasklistObj).map((key) => {
-    return [key, crntTasklistObj[key].title, crntTasklistObj[key].prefix];
+    return [
+      key,
+      crntTasklistObj[key].title,
+      crntTasklistObj[key].prefix,
+      crntTasklistObj[key].isSubject,
+      crntTasklistObj[key].description,
+    ];
   });
   if (newTasklists.length > 0) {
     SHEET_TASKLIST.getRange(
@@ -102,7 +129,7 @@ function convTaskToTaskInfo(task, tasklistId, taskListObj) {
   let tmpNotes = {};
   try {
     tmpNotes = JSON.parse(task.notes);
-  } catch {
+  } catch (error) {
     // エラーの場合、tmpNotesは空のままとする
   }
   const customStatus = tmpNotes.customStatus || 'todo';
@@ -309,4 +336,20 @@ function upsertTask(taskInfoObjs) {
   } else {
     return JSON.stringify({ taskInfos: resTaskInfos });
   }
+}
+
+function upsertTasklist(tasklistInfoObj) {
+  if (tasklistInfoObj.id) {
+    // TODO UPDATE
+    Tasks.Tasklists.update(tasklistInfoObj.id, {
+      id: tasklistInfoObj.id,
+      title: tasklistInfoObj.title,
+    });
+    // TODO SS更新
+  } else {
+    Tasks.Tasklists.insert({ title: tasklistInfoObj.title });
+  }
+  exportAllTasklistToSheet();
+  // 更新後のタスクリスト情報を返す
+  return getTasklistInfo();
 }

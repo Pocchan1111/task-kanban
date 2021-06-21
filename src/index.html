@@ -23,7 +23,7 @@
     <div id="app">
       <v-app>
         <v-app-bar dark fixed app>
-          <span class="headline">My Task Board</span>
+          <span class="headline"><?!= pageTitle ?></span>
           <v-spacer></v-spacer>
           <!-- 処理中表示 -->
           <p v-if="isProcessing" class="caption mb-0 pr-1">Processing...</p>
@@ -34,7 +34,9 @@
             size="20"
           ></v-progress-circular>
           <!-- 処理中表示END -->
-          <v-btn icon @click="showNewDialog"><v-icon>mdi-plus</v-icon></v-btn>
+          <v-btn @click="showCreateTasklistDialog" icon
+            ><v-icon>mdi-plus</v-icon></v-btn
+          >
           <v-btn icon href="https://calendar.google.com/calendar/u/0/r"
             ><v-icon>mdi-calendar</v-icon></v-btn
           >
@@ -86,6 +88,15 @@
                           clearable
                         ></v-select>
                       </v-col>
+                      <v-col
+                        cols="auto"
+                        class="pl-2"
+                        @click="showEditTasklistDialog"
+                      >
+                        <v-btn :disabled="!shownTasklistId" icon
+                          ><v-icon>mdi-pencil</v-icon></v-btn
+                        >
+                      </v-col>
                     </v-row>
                     <v-expand-transition>
                       <v-row
@@ -109,10 +120,18 @@
                       <v-col>Todo</v-col>
                       <v-col
                         cols="auto"
-                        class="grey--text body-1"
-                        align-self="end"
+                        class="grey--text body-1 pr-0"
+                        align-self="center"
                         >{{todoTasks().length}}</v-col
                       >
+                      <v-col cols="auto" class="px-1">
+                        <v-btn
+                          @click="showCreateTaskDialog('todo')"
+                          color="green lighten-2"
+                          icon
+                          ><v-icon>mdi-plus</v-icon></v-btn
+                        >
+                      </v-col>
                     </v-row>
                   </v-card-title>
                   <v-card-text>
@@ -122,7 +141,7 @@
                       draggableid="todoTasks"
                       :shownote="showNote"
                       @on-end="onEnd"
-                      @show-detail-dialog="showDetailDialog"
+                      @show-detail-dialog="showEditTaskDialog"
                       @switch-is-processing="switchIsProcessing"
                     ></task-cards>
                   </v-card-text>
@@ -135,10 +154,18 @@
                       <v-col>This week</v-col>
                       <v-col
                         cols="auto"
-                        class="grey--text body-1"
-                        align-self="end"
+                        class="grey--text body-1 pr-0"
+                        align-self="center"
                         >{{thisWeekTasks().length}}</v-col
                       >
+                      <v-col cols="auto" class="px-1">
+                        <v-btn
+                          @click="showCreateTaskDialog('thisWeek')"
+                          color="teal lighten-2"
+                          icon
+                          ><v-icon>mdi-plus</v-icon></v-btn
+                        >
+                      </v-col>
                     </v-row>
                   </v-card-title>
                   <v-card-text>
@@ -148,7 +175,7 @@
                       draggableid="thisWeekTasks"
                       :shownote="showNote"
                       @on-end="onEnd"
-                      @show-detail-dialog="showDetailDialog"
+                      @show-detail-dialog="showEditTaskDialog"
                       @switch-is-processing="switchIsProcessing"
                     ></task-cards>
                   </v-card-text>
@@ -161,10 +188,18 @@
                       <v-col>Today</v-col>
                       <v-col
                         cols="auto"
-                        class="grey--text body-1"
-                        align-self="end"
+                        class="grey--text body-1 pr-0"
+                        align-self="center"
                         >{{todayTasks().length}}</v-col
                       >
+                      <v-col cols="auto" class="px-1">
+                        <v-btn
+                          @click="showCreateTaskDialog('today')"
+                          color="cyan lighten-2"
+                          icon
+                          ><v-icon>mdi-plus</v-icon></v-btn
+                        >
+                      </v-col>
                     </v-row>
                   </v-card-title>
                   <v-card-text>
@@ -174,7 +209,7 @@
                       draggableid="todayTasks"
                       :shownote="showNote"
                       @on-end="onEnd"
-                      @show-detail-dialog="showDetailDialog"
+                      @show-detail-dialog="showEditTaskDialog"
                       @switch-is-processing="switchIsProcessing"
                       ref="todayTasks"
                     ></task-cards>
@@ -188,10 +223,18 @@
                       <v-col>In progress</v-col>
                       <v-col
                         cols="auto"
-                        class="grey--text body-1"
-                        align-self="end"
+                        class="grey--text body-1 pr-0"
+                        align-self="center"
                         >{{inProgressTasks().length}}</v-col
                       >
+                      <v-col cols="auto" class="px-1">
+                        <v-btn
+                          @click="showCreateTaskDialog('inProgress')"
+                          color="blue lighten-2"
+                          icon
+                          ><v-icon>mdi-plus</v-icon></v-btn
+                        >
+                      </v-col>
                     </v-row>
                   </v-card-title>
                   <v-card-text>
@@ -201,7 +244,7 @@
                       draggableid="inProgressTasks"
                       :shownote="showNote"
                       @on-end="onEnd"
-                      @show-detail-dialog="showDetailDialog"
+                      @show-detail-dialog="showEditTaskDialog"
                       @switch-is-processing="switchIsProcessing"
                     ></task-cards>
                   </v-card-text>
@@ -214,10 +257,18 @@
                       <v-col>Done</v-col>
                       <v-col
                         cols="auto"
-                        class="grey--text body-1"
-                        align-self="end"
+                        class="grey--text body-1 pr-0"
+                        align-self="center"
                         >{{doneTasks().length}}</v-col
                       >
+                      <v-col cols="auto" class="px-1">
+                        <v-btn
+                          @click="showCreateTaskDialog('done')"
+                          color="grey"
+                          icon
+                          ><v-icon>mdi-plus</v-icon></v-btn
+                        >
+                      </v-col>
                     </v-row>
                   </v-card-title>
                   <v-card-text>
@@ -227,7 +278,7 @@
                       draggableid="doneTasks"
                       :shownote="showNote"
                       @on-end="onEnd"
-                      @show-detail-dialog="showDetailDialog"
+                      @show-detail-dialog="showEditTaskDialog"
                       @switch-is-processing="switchIsProcessing"
                     ></task-cards>
                   </v-card-text>
@@ -235,12 +286,12 @@
               </v-col>
             </v-row>
           </v-container>
-          <!-- 編集ダイアログ -->
-          <v-dialog v-model="dispDetailDialog" max-width="800" scrollable>
+          <!-- タスク編集ダイアログ -->
+          <v-dialog v-model="dispTaskDialog" max-width="800" scrollable>
             <v-card>
               <v-card-title class="headline">
                 <v-text-field
-                  v-model="detailShown.title"
+                  v-model="taskInDialog.title"
                   placeholder="タイトル空白のまま閉じた場合、作成/編集はキャンセル"
                   hide-details
                   dense
@@ -254,7 +305,7 @@
                     <v-col cols="6">
                       <v-select
                         label="Status"
-                        v-model="detailShown.customStatus"
+                        v-model="taskInDialog.customStatus"
                         :items="statuses"
                         hide-details
                         dense
@@ -263,7 +314,7 @@
                     <v-col cols="6">
                       <v-select
                         label="Classify"
-                        v-model="detailShown.tasklistId"
+                        v-model="taskInDialog.tasklistId"
                         :items="classifies"
                         hide-details
                         dense
@@ -281,7 +332,7 @@
                       >
                         <template v-slot:activator="{ on, attrs }">
                           <v-text-field
-                            v-model="detailShown.plannedDate"
+                            v-model="taskInDialog.plannedDate"
                             label="Planned date"
                             readonly
                             v-bind="attrs"
@@ -292,7 +343,7 @@
                           ></v-text-field>
                         </template>
                         <v-date-picker
-                          v-model="detailShown.plannedDate"
+                          v-model="taskInDialog.plannedDate"
                           @input="dispPlannedDatePicker = false"
                         ></v-date-picker>
                       </v-menu>
@@ -307,7 +358,7 @@
                       >
                         <template v-slot:activator="{ on, attrs }">
                           <v-text-field
-                            v-model="detailShown.deadline"
+                            v-model="taskInDialog.deadline"
                             label="Deadline"
                             readonly
                             v-bind="attrs"
@@ -318,19 +369,19 @@
                           ></v-text-field>
                         </template>
                         <v-date-picker
-                          v-model="detailShown.deadline"
+                          v-model="taskInDialog.deadline"
                           @input="dispDeadlinePicker = false"
                         ></v-date-picker>
                       </v-menu>
                     </v-col>
                   </v-row>
                 </v-container>
-                <v-system-bar v-if="detailShown.id" color="grey lighten-2"
+                <v-system-bar v-if="taskInDialog.id" color="grey lighten-2"
                   >Sub tasks</v-system-bar
                 >
-                <v-container v-if="detailShown.id">
+                <v-container v-if="taskInDialog.id">
                   <v-row
-                    v-for="subTask in getSubTasks(detailShown.id)"
+                    v-for="subTask in getSubTasks(taskInDialog.id)"
                     :key="subTask.id"
                   >
                     <v-col cols="auto" class="py-0 pr-0">
@@ -358,7 +409,7 @@
                     <v-col cols="auto" class="py-2">
                       <v-btn
                         text
-                        @click="createSubTask(detailShown.id, detailShown.tasklistId)"
+                        @click="createSubTask(taskInDialog.id, taskInDialog.tasklistId)"
                       >
                         <v-icon class="pr-1">mdi-plus</v-icon>
                         Add sub task
@@ -373,7 +424,7 @@
                     <v-col cols="12">
                       <v-textarea
                         label=""
-                        v-model="detailShown.note"
+                        v-model="taskInDialog.note"
                         hide-details
                         dense
                         clearable
@@ -383,6 +434,56 @@
                     </v-col>
                   </v-row>
                 </v-container>
+              </v-card-text>
+            </v-card>
+          </v-dialog>
+          <!-- タスク編集ダイアログEND -->
+          <!-- タスクリスト編集ダイアログ -->
+          <v-dialog v-model="dispTasklistDialog" max-width="800" scrollable>
+            <v-card>
+              <v-card-title class="headline">
+                <span v-if="tasklistInDialog.icon"
+                  >{{tasklistInDialog.icon}}</span
+                >
+                <v-text-field
+                  v-model="tasklistInDialog.title"
+                  placeholder="タイトル空白のまま閉じた場合、作成/編集はキャンセル"
+                  hide-details
+                  dense
+                  style="font-size: 20px"
+                ></v-text-field>
+              </v-card-title>
+              <v-card-text class="pt-1 pb-3" max-height="600">
+                <!-- <v-system-bar color="grey lighten-2">Imformation</v-system-bar>
+                <v-container>
+                  <v-row>
+                    <v-col cols="6">
+                      <v-text-field
+                        v-model="tasklistInDialog.prefix"
+                        label="Prefix"
+                        hide-details
+                        dense
+                      ></v-text-field>
+                    </v-col>
+                    <v-spacer></v-spacer>
+                  </v-row>
+                </v-container> -->
+                <!-- <v-system-bar color="grey lighten-2">Description</v-system-bar>
+                <v-container>
+                  <v-row>
+                    <v-col cols="12">
+                      <v-textarea
+                        label=""
+                        v-model="tasklistInDialog.description"
+                        hide-details
+                        dense
+                        clearable
+                        auto-grow
+                        rows="1"
+                      ></v-textarea>
+                    </v-col>
+                  </v-row>
+                </v-container> -->
               </v-card-text>
             </v-card>
           </v-dialog>
@@ -400,6 +501,9 @@
     <script>
       const useThisWeek = '<?= useThisWeek ?>';
       const useToday = '<?= useToday ?>';
+      const defaultOrder = '<?= defaultOrder ?>';
+      const defaultClassify = '<?= defaultClassify ?>';
+      const showNote = '<?= showNote ?>';
     </script>
     <?!= include('js'); ?>
   </body>
